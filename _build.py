@@ -60,7 +60,7 @@ def transform(page, html):
                         f'<link rel="icon" href="{pre}favicon.ico" sizes="48x48"/>'
                         f'<link rel="icon" href="{pre}favicon.svg" type="image/svg+xml"/>'
                         f'<link rel="apple-touch-icon" href="{pre}apple-touch-icon.png"/></head>', 1)
-    html = html.replace("</body>", f'<script src="{pre}main.js" data-root="{pre}" defer></script></body>')
+    html = html.replace("</body>", f'<script src="https://sales.crestra.de/a.js" defer data-banner="off" data-privacy="{pre}datenschutz/"></script><script src="{pre}main.js" data-root="{pre}" defer></script></body>')
 
     # Hinweis auf crestra im Fuß (wie bei CO2NSULTING)
     madeby = ('<div class="madeby-rahmen"><div class="madeby">'

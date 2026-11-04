@@ -24,12 +24,20 @@
     }
   }
 
-  function saveConsent(maps) {
-    const c = { categories: { necessary: true, maps: !!maps }, decidedAt: new Date().toISOString(), version: VERSION };
+  function saveConsent(maps, stats) {
+    const c = { categories: { necessary: true, maps: !!maps, stats: !!stats }, decidedAt: new Date().toISOString(), version: VERSION };
     try {
       localStorage.setItem(KEY, JSON.stringify(c));
     } catch (e) {}
     applyConsent(c);
+    syncStats(c);
+  }
+
+  // Besucherstatistik (Crestra, a.js mit data-banner="off"): folgt der Auswahl in diesem Banner.
+  function syncStats(c) {
+    try {
+      if (window.CrestraConsent) window.CrestraConsent.set(c && c.categories.stats ? "all" : "necessary");
+    } catch (e) {}
   }
 
   const BTN_GHOST = "rounded-full border border-border px-5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary";
@@ -40,7 +48,8 @@
 
   function openBanner(showDetails) {
     closeBanner();
-    const mapsOn = !!(readConsent() || { categories: {} }).categories.maps;
+    const prev = (readConsent() || { categories: {} }).categories;
+    const mapsOn = !!prev.maps, statsOn = !!prev.stats;
     banner = document.createElement("div");
     banner.setAttribute("role", "dialog");
     banner.setAttribute("aria-modal", "false");
@@ -53,12 +62,13 @@
         `<div class="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-card/95 p-5 shadow-[var(--shadow-warm)] backdrop-blur-md md:p-7">` +
         `<div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-ember)] text-primary-foreground">${ICON_COOKIE}</span>` +
         `<div class="flex-1"><h2 id="consent-title" class="font-display text-lg font-semibold text-foreground">Wir respektieren deine Privatsphäre</h2>` +
-        `<p id="consent-desc" class="mt-2 text-sm leading-relaxed text-foreground/80">Wir verwenden nur technisch notwendige Speicher&shy;mechanismen, damit unsere Webseite funktioniert. Mit deiner Einwilligung laden wir zusätzlich die Karte von Google Maps, um dir die Anfahrt zu zeigen. Dabei werden Daten (u. a. deine IP-Adresse) an Google in Drittländer (USA) übertragen. Du kannst deine Auswahl jederzeit unter <a href="${ROOT}datenschutz/" class="text-gold underline-offset-4 hover:underline">Datenschutz</a> ändern. Eine Ablehnung hat keine Nachteile.</p></div>` +
+        `<p id="consent-desc" class="mt-2 text-sm leading-relaxed text-foreground/80">Wir verwenden nur technisch notwendige Speicher&shy;mechanismen, damit unsere Webseite funktioniert. Mit deiner Einwilligung laden wir zusätzlich die Karte von Google Maps, um dir die Anfahrt zu zeigen, und zählen, welche Seiten bei einem Besuch angesehen werden (eigene Statistik, keine Weitergabe an Dritte). Dabei werden Daten (u. a. deine IP-Adresse) an Google in Drittländer (USA) übertragen. Du kannst deine Auswahl jederzeit unter <a href="${ROOT}datenschutz/" class="text-gold underline-offset-4 hover:underline">Datenschutz</a> ändern. Eine Ablehnung hat keine Nachteile.</p></div>` +
         `<button type="button" data-act="close" aria-label="Banner schließen ohne Einwilligung" class="rounded-full p-1 text-foreground/60 transition-colors hover:bg-secondary hover:text-foreground">${ICON_X("h-4 w-4")}</button></div>` +
         (details
           ? `<div class="mt-5 space-y-3 rounded-xl border border-border bg-background/40 p-4">` +
             `<label class="flex cursor-pointer items-start gap-3"><input class="mt-1 h-4 w-4 accent-[color:var(--ember)] disabled:opacity-60" disabled type="checkbox" checked><span class="flex-1"><span class="block text-sm font-semibold text-foreground">Notwendig</span><span class="block text-xs leading-relaxed text-foreground/65">Speichert deine Cookie-Auswahl. Ohne diese funktioniert das Banner nicht.</span></span></label>` +
-            `<label class="flex cursor-pointer items-start gap-3"><input data-maps class="mt-1 h-4 w-4 accent-[color:var(--ember)] disabled:opacity-60" type="checkbox"${mapsOn ? " checked" : ""}><span class="flex-1"><span class="block text-sm font-semibold text-foreground">Google Maps</span><span class="block text-xs leading-relaxed text-foreground/65">Lädt die interaktive Karte auf der Kontaktseite. Anbieter: Google Ireland Ltd.</span></span></label></div>`
+            `<label class="flex cursor-pointer items-start gap-3"><input data-maps class="mt-1 h-4 w-4 accent-[color:var(--ember)] disabled:opacity-60" type="checkbox"${mapsOn ? " checked" : ""}><span class="flex-1"><span class="block text-sm font-semibold text-foreground">Google Maps</span><span class="block text-xs leading-relaxed text-foreground/65">Lädt die interaktive Karte auf der Kontaktseite. Anbieter: Google Ireland Ltd.</span></span></label>` +
+            `<label class="flex cursor-pointer items-start gap-3"><input data-stats class="mt-1 h-4 w-4 accent-[color:var(--ember)] disabled:opacity-60" type="checkbox"${statsOn ? " checked" : ""}><span class="flex-1"><span class="block text-sm font-semibold text-foreground">Statistik</span><span class="block text-xs leading-relaxed text-foreground/65">Merkt sich, welche Seiten du bei einem Besuch ansiehst und ob du wiederkommst. Eigene Auswertung, keine Weitergabe an Dritte. Ohne Einwilligung zählen wir Seitenaufrufe nur anonym und ohne Speicherung auf deinem Gerät.</span></span></label></div>`
           : "") +
         `<div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center">` +
         `<button data-act="toggle" class="text-sm font-medium text-foreground/70 underline-offset-4 hover:underline sm:mr-auto">${details ? "Details ausblenden" : "Einstellungen"}</button>` +
@@ -75,10 +85,10 @@
         case "toggle":
           return render(!banner.querySelector("[data-maps]"));
         case "save":
-          saveConsent(banner.querySelector("[data-maps]").checked);
+          saveConsent(banner.querySelector("[data-maps]").checked, banner.querySelector("[data-stats]").checked);
           break;
         case "accept":
-          saveConsent(true);
+          saveConsent(true, true);
           break;
         default: // close, reject
           saveConsent(false);
@@ -115,7 +125,7 @@
     const b = e.target.closest("button");
     if (!b || (banner && banner.contains(b))) return;
     const label = b.textContent.trim();
-    if (label === "Karte laden") saveConsent(true);
+    if (label === "Karte laden") saveConsent(true, !!(readConsent() || { categories: {} }).categories.stats);
     else if (label === "Cookie-Einstellungen" || (mapWrap && mapWrap.contains(b) && label === "Einstellungen")) openBanner(true);
   });
 
