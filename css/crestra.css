@@ -8,3 +8,5 @@
 @media(max-width:600px){.madeby span{width:100%}}
 .madeby-rahmen{max-width:80rem;margin:0 auto;padding:0 1rem 2.5rem}
 @media(min-width:768px){.madeby-rahmen{padding:0 2rem 2.5rem}}
+/* Lange Wörter in Überschriften auf schmalen Handys trennen (320 px lief „Datenschutzerklärung“ seitlich über). */
+h1,h2,h3{overflow-wrap:break-word;hyphens:auto}
